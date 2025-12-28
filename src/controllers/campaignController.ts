@@ -2,6 +2,11 @@
 import { Request, Response } from "express";
 import User from "../models/User";
 import Campaign, { ICampaign } from "../models/Campaign"; // ✅ Import `ICampaign`
+import { snapshotAudience } from "../services/snapshotAudience";
+import { enqueueCampaignExecution } from "../services/enqueueCampaignExecution";
+import Filter from "../models/Filter";
+import { hashFilter } from "../utils/hashFilter"; // ✅ Import hashFilter utility (adjust path if needed)
+import CampaignRecipient from "../models/CampaignRecipient";
 
 export const getCampaigns = async (req: Request, res: Response) => {
   try {
@@ -79,57 +84,141 @@ export const getCampaigns = async (req: Request, res: Response) => {
   }
 };
 
+export const createCampaign = async (req: Request, res: Response) => {
+  const { name, type } = req.body;
+
+  if (!name || !type) {
+    return res.status(400).json({
+      message: "Name and type are required to create a campaign"
+    });
+  }
+
+  const campaign = await Campaign.create({
+    name,
+    type,
+    userId: "67daedeaff85ef645f71206f",
+    status: "Draft",
+    executionEnqueued: false,
+    audienceSnapshotted: false,
+    openRate: 0,
+    ctr: 0,
+    delivered: 0
+  });
+
+  res.status(201).json({ campaign });
+};
+
 
 // ✅ Create or Update a Campaign
 export const createOrUpdateCampaign = async (req: Request, res: Response) => {
   try {
-    const { name, type, audience, template, schedule, status } = req.body;
-
-    if (!name || !type || !audience || !template /*|| !schedule*/) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    const newCampaign = new Campaign({
-      name,
-      type,
-      audience,
-      template,
-      userId: "67daedeaff85ef645f71206f",
-      schedule: schedule || null, // ✅ Allow null schedule
-      status: status || "Draft",
-    });
-
-    await newCampaign.save();
-    res.status(201).json({ message: "Campaign Saved Successfully", campaign: newCampaign });
-  } catch (error) {
-    console.error("Error saving campaign:", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-// ✅ Edit a Campaign
-export const editCampaign = async (req: Request, res: Response) => {
-  try {
+    const { action, ...payload } = req.body;
     const { campaignId } = req.params;
 
-    const updatedData = req.body;
+    let campaign;
 
-    const campaign = await Campaign.findByIdAndUpdate(
-      campaignId,
-      updatedData,
-      { new: true }
-    );
+    if (campaignId) {
+      campaign = await Campaign.findByIdAndUpdate(
+        campaignId,
+        payload,
+        { new: true }
+      );
+    } else {
+      campaign = await Campaign.create({
+        ...payload,
+        status: "Draft", // backend-owned
+        executionEnqueued: false,
+        audienceSnapshotted: false
+      });
+    }
 
     if (!campaign) {
       return res.status(404).json({ message: "Campaign not found" });
     }
 
-    res.status(200).json({ message: "Campaign Updated Successfully", campaign });
-  } catch (error) {
-    console.error("Error updating campaign:", error);
+    // 🔥 THE ONLY PLACE WHERE SCHEDULING HAPPENS
+    if (action === "Scheduled") {
+      if (campaign.status !== "Draft") {
+        return res.status(400).json({ message: "Invalid state transition" });
+      }
+
+      // snapshot audience (re-snapshot if filter changed)
+      const filter = await Filter.findById(campaign.audience).lean();
+      if (!filter) throw new Error("Audience filter not found");
+
+      await CampaignRecipient.deleteMany({ campaignId: campaign._id });
+      await snapshotAudience(campaign._id.toString(), filter);
+
+      await enqueueCampaignExecution(campaign._id.toString());
+
+      campaign.status = "Scheduled";
+      campaign.executionEnqueued = true;
+      campaign.audienceSnapshotted = true;
+
+      await campaign.save();
+    }
+
+    res.json({ campaign });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+// ✅ Edit a Campaign
+// export const editCampaign = async (req: Request, res: Response) => {
+//   const { campaignId } = req.params;
+//   const updatedData = req.body;
+
+//   const campaign = await Campaign.findByIdAndUpdate(
+//     campaignId,
+//     updatedData,
+//     { new: true }
+//   );
+
+//   if (!campaign) {
+//     return res.status(404).json({ message: "Campaign not found" });
+//   }
+
+//   res.json({ campaign });
+// };
+// // ✅ Schedule a Campaign
+
+// export const scheduleCampaign = async (req: Request, res: Response) => {
+//   const { campaignId } = req.params;
+
+//   const campaign = await Campaign.findById(campaignId);
+//   if (!campaign) return res.status(404).json({ message: "Not found" });
+
+//   // 🔒 backend validation
+//   if (!campaign.audience || !campaign.template || !campaign.schedule) {
+//     return res.status(400).json({
+//       message: "Audience, template and schedule required"
+//     });
+//   }
+
+//   if (campaign.status !== "Draft") {
+//     return res.status(400).json({
+//       message: "Only Draft campaigns can be scheduled"
+//     });
+//   }
+
+//   // snapshot audience
+//   if (!campaign.audienceSnapshotted) {
+//     const filter = await Filter.findById(campaign.audience).lean();
+//     await snapshotAudience(campaign._id.toString(), filter);
+//     campaign.audienceSnapshotted = true;
+//   }
+
+//   // enqueue jobs
+//   await enqueueCampaignExecution(campaign._id.toString());
+
+//   campaign.status = "Scheduled";
+//   await campaign.save();
+
+//   res.json({ message: "Campaign scheduled", campaign });
+// };
+
 
 // ✅ Get Campaign Details by campaignId
 export const getCampaignById = async (req: Request, res: Response) => {
@@ -164,7 +253,7 @@ export const toggleCampaignStatus = async (req: Request, res: Response) => {
     }
 
     // Toggle status
-    campaign.status = campaign.status === "On Going" ? "Paused" : "On Going";
+    campaign.status = campaign.status === "Active" ? "Paused" : "Active";
     await campaign.save();
 
     console.log("Updated Campaign:", campaign); // ✅ Log updated campaign

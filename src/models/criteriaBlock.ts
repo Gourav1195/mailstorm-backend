@@ -1,7 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICriteriaBlock extends Document {
-  name: string;
+  // name: string;
+  key: string;                     // actual backend field
+  label: string;                   // UI display name
+  
   type: 'string' | 'number' | 'date';
   category: 'filterComponent' | 'triggerFilter';
   operators: string[];
@@ -9,7 +12,10 @@ export interface ICriteriaBlock extends Document {
 
 const CriteriaBlockSchema: Schema = new Schema(
   {
-    name: { type: String, required: true },
+    // name: { type: String, required: true },
+     key: { type: String, required: true, unique: true },
+    label: { type: String, required: true },
+
     type: { type: String, enum: ['string', 'number', 'date'], required: true },
     category: { type: String, enum: ['filterComponent', 'triggerFilter'], required: true },
     operators: {

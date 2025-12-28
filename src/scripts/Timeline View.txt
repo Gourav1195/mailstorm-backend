@@ -1,0 +1,30 @@
+[ User builds filter ]
+        |
+        v
+[ buildAudienceQuery ]
+        |
+        v
+[ Audience preview count ]  (no data stored)
+        |
+User clicks "Schedule"
+        |
+        v
+[ buildAudienceQuery AGAIN ]
+        |
+        v
+[ SNAPSHOT audience ]
+        |
+        v
+[ CampaignRecipients table ]
+        |
+        v
+[ Enqueue email jobs ]
+        |
+        v
+[ Email Worker ]
+        |
+        v
+[ DEDUPE CHECK ]
+        |
+        v
+[ SMTP send ]
