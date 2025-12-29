@@ -23,5 +23,5 @@ AudienceSchema.index({ "location.city": 1 });
 AudienceSchema.index({ tags: 1 });
 AudienceSchema.index({ "attributes.region": 1 });
 
-const Audience = mongoose.model("Audience", AudienceSchema);
+export const Audience = mongoose.model("Audience", AudienceSchema);
 export default Audience;
