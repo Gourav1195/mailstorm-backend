@@ -35,6 +35,7 @@ async function run() {
 
   await Audience.insertMany(bulk, { ordered: false });
   console.log("Inserted 10k fake audience");
+  await mongoose.disconnect();
 
   process.exit(0);
 }

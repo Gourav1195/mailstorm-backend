@@ -142,6 +142,7 @@ async function seedCriteria() {
     }
 
     console.log("[seed] criteria blocks ready");
+    await mongoose.disconnect();
     process.exit(0);
   } catch (err) {
     console.error("[seed] failed", err);
