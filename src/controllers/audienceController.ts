@@ -5,7 +5,7 @@ export const createAudienceMember = async (req: Request, res: Response) => {
   try {
     const { email, name, age, location, tags, attributes } = req.body;
     const newMember = new Audience({
-      email,
+        email,
         name,
         age,
         location,
@@ -26,5 +26,15 @@ export const getAudience = async (req: Request, res: Response) => {
     res.json(audience);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch audience" });
+  }
+};
+
+// get audience count 
+export const getAudienceCount = async (req: Request, res: Response) => {
+  try {
+    const count = await Audience.countDocuments();
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch audience count" });
   }
 };

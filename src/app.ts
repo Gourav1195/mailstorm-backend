@@ -11,6 +11,8 @@ import logger from "./utils/logger";
 import activityRoutes from "./routes/activityRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import filterRoutes from "./routes/filterRoutes";
+import audienceRoutes from "./routes/audienceRoute";
+import healthRouter from "./routes/health";
 import templateRoutes from "./routes/templateRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
 import emailRoutes from "./routes/emailRoutes";
@@ -43,6 +45,8 @@ app.use("/api/templates", templateRoutes);
 app.use("/api/dashboard", dashboardRoutes); // Register Dashboard Routes
 app.use("/api/emails", emailRoutes);
 app.use('/api/criteria-blocks', criteriaBlockRoutes);
+app.use('/api/audience', audienceRoutes);
+app.use('/api/healthRouter', healthRouter);
 // Global Error Handler
 app.use(errorHandler);
 
