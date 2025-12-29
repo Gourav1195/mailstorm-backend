@@ -43,10 +43,22 @@ const allowedOperatorsMap: Record<CriteriaType, string[]> = {
   ],
 };
 
+// server-side mapping (single source of truth)
+const FIELD_MAP: Record<string, string> = {
+  age: "age",
+  city: "location.city",
+  state: "location.state",
+  country: "location.country",
+  tags: "tags",
+  region: "attributes.region",
+  plan: "attributes.plan"
+};
+
+
 export const createCriteriaBlock = async (req: Request, res: Response) => {
   try {
-    const { name, type, category, operators } = req.body;
-
+    const { key, label:name, type, category, operators } = req.body;
+    console.log("name", name, "type", type, "category", category, "operators", operators);
     if (!name || !type || !category || !operators) {
       return res.status(400).json({ success: false, message: 'Missing required fields.' });
     }
@@ -55,10 +67,27 @@ export const createCriteriaBlock = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Operators must be a non-empty array.' });
     }
 
+    const normalizedName = String(name).trim().toLowerCase();
+
+// const key = FIELD_MAP[normalizedName];
+// if (!key) {
+//   return res.status(400).json({
+//     success: false,
+//     message: `Unknown field mapping for ${normalizedName}`
+//   });
+// }
+
     // ✅ Validate type safely
     if (!['string', 'number', 'date'].includes(type)) {
       return res.status(400).json({ success: false, message: `Invalid type: ${type}` });
     }
+console.log("Beforeeeeeeeeee CREATE BLOCK PAYLOAD", {
+  key,
+  label: name,
+  type,
+  category,
+  operators
+});
 
     const allowedOperators = allowedOperatorsMap[type as CriteriaType];
     const invalidOperators = operators.filter((op: string) => !allowedOperators.includes(op));
@@ -70,9 +99,10 @@ export const createCriteriaBlock = async (req: Request, res: Response) => {
     }
 
     const existingBlock = await CriteriaBlock.findOne({
-      name: { $regex: `^${name}$`, $options: 'i' },
+      label: new RegExp(`^${name}$`, 'i'),
       category,
     });
+
 
     if (existingBlock) {
       return res.status(409).json({
@@ -80,8 +110,15 @@ export const createCriteriaBlock = async (req: Request, res: Response) => {
         message: 'A Criteria Block with the same name already exists in this category.',
       });
     }
+console.log("afterrrrrrrrrrrrrrrrrr CREATE BLOCK PAYLOAD", {
+  key,
+  label: name,
+  type,
+  category,
+  operators
+});
 
-    const newBlock = await CriteriaBlock.create({ name, type, category, operators });
+    const newBlock = await CriteriaBlock.create({ key, label:name.trim(), type, category, operators });
 
     return res.status(201).json({
       success: true,

@@ -29,7 +29,7 @@ const FilterSchema = new mongoose.Schema({
    // ✅ Add customFields as a flexible object (key-value pairs)
    customFields: { 
     type: Map, 
-    of: String, // or `mongoose.Schema.Types.Mixed` for flexibility 
+    of: String, 
     default: {} 
   }
 });
