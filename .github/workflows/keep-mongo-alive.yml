@@ -1,0 +1,15 @@
+name: Keep MongoDB Alive
+
+on:
+  schedule:
+    - cron: "0 6 */3 * *"   # every 3 days at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Mailstorm DB
+        run: |
+          curl -f https://your-mailstorm-backend-url.com/health/ping-db
