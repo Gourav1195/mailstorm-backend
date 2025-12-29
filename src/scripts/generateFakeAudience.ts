@@ -1,7 +1,7 @@
 // src/scripts/generateFakeAudience.ts
 import mongoose from "mongoose";
 import { faker } from "@faker-js/faker";
-import { Audience } from "../models/Audience";
+import Audience from "../models/Audience";
 import dotenv from "dotenv";
 
 dotenv.config();
